@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commander — Vendora-sn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@300;400;500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script>(function(){var t=localStorage.getItem("dfm_theme")||"dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div id="nav-placeholder"></div>
+<div class="page-wrap">
+  <div class="section" style="padding-top:calc(var(--nav-h) + 2rem)">
+    <div class="breadcrumb"><a href="index.html">Accueil</a> › Commande</div>
+    <h1 style="font-family:var(--font-display);font-size:2rem;letter-spacing:.05em;margin-bottom:2rem">FINALISER LA <span style="color:var(--accent,var(--red))">COMMANDE</span></h1>
+    <div id="emptyCart" style="display:none;text-align:center;padding:3rem"><p style="font-family:var(--font-display);font-size:1.5rem;color:var(--muted)">PANIER <span style="color:var(--accent,var(--red))">VIDE</span></p><a href="boutique.html" class="btn-red" style="margin-top:1rem;display:inline-block">Explorer les articles</a></div>
+    <div id="checkoutContent" style="display:none">
+      <div class="step-indicator" id="stepInd">
+        <div class="step active">1 · Infos</div>
+        <div class="step">2 · Paiement</div>
+        <div class="step">3 · Confirmation</div>
+      </div>
+      <div class="checkout-layout">
+        <div id="checkoutForms">
+          <!-- Step 1 -->
+          <div id="step1">
+            <div class="checkout-section">
+              <h3>VOS INFORMATIONS</h3>
+              <p style="font-size:.78rem;color:var(--muted);margin-bottom:1.35rem">Pas besoin de créer un compte — remplissez juste vos informations.</p>
+              <div class="form-row"><div class="form-group"><label>Prénom *</label><input type="text" id="cFirst" class="form-input" placeholder="Moussa"></div><div class="form-group"><label>Nom *</label><input type="text" id="cLast" class="form-input" placeholder="Diop"></div></div>
+              <div class="form-row"><div class="form-group"><label>Téléphone *</label><input type="tel" id="cPhone" class="form-input" placeholder="+221 77 xxx xx xx"></div><div class="form-group"><label>Email (optionnel)</label><input type="email" id="cEmail" class="form-input" placeholder="votre@email.com"></div></div>
+              <div class="form-group"><label>Ville *</label><input type="text" id="cCity" class="form-input" placeholder="Dakar, Thiès, Saint-Louis..."></div>
+              <div class="form-group"><label>Adresse de livraison *</label><input type="text" id="cAddress" class="form-input" placeholder="Quartier, rue, point de repère..."></div>
+              <div class="form-group"><label>Note pour le vendeur</label><textarea id="cNote" class="form-input" rows="2" placeholder="Instructions spéciales, disponibilités..."></textarea></div>
+              <button class="btn-red" style="width:100%;padding:1rem" onclick="goStep2()">Continuer →</button>
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div id="step2" style="display:none">
+            <div id="paymentGroups"></div>
+            <button class="btn-red" style="width:100%;padding:1rem;margin-bottom:.65rem" id="payBtn" onclick="placeOrder()">Confirmer la commande</button>
+            <button class="btn-ghost" style="width:100%;padding:.82rem" onclick="goStep1()">← Retour</button>
+          </div>
+          <!-- Step 3 -->
+          <div id="step3" style="display:none;text-align:center;padding:2.5rem 1rem">
+            <div style="font-size:3rem;margin-bottom:1rem">✓</div>
+            <h2 style="font-family:var(--font-display);font-size:2rem;letter-spacing:.05em;margin-bottom:.75rem">COMMANDE <span style="color:var(--accent,var(--red))">CONFIRMÉE</span></h2>
+            <p id="confirmMsg" style="color:var(--muted);font-size:.88rem;line-height:1.85;margin-bottom:2rem"></p>
+            <a href="boutique.html" class="btn-outline">Continuer à explorer →</a>
+          </div>
+        </div>
+        <div class="order-recap" id="sideRecap"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footer-placeholder"></div>
+<div id="cart-placeholder"></div>
+<div id="toast-container"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="assets/db.js"></script><script src="assets/auth.js"></script><script src="assets/config.js"></script><script src="assets/ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="assets/notify.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  loadNav();loadFooter();loadCart();loadBackBtn();
+  if(typeof emailjs!=='undefined')emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY);
+  const cart=DB.getCart();
+  if(!cart.length){document.getElementById('emptyCart').style.display='block';}
+  else{document.getElementById('checkoutContent').style.display='block';renderRecap();}
+});
+
+function renderRecap(){
+  const items=DB.getCart();const total=DB.getCartTotal();
+  document.getElementById('sideRecap').innerHTML=`
+    <p class="recap-title">RÉCAPITULATIF</p>
+    ${items.map(i=>`<div class="recap-item"><div class="recap-item-name">${i.name}</div><div class="recap-item-seller">Vendeur: ${i.sellerName}</div><div class="recap-item-price">${formatPrice(i.price)}</div></div>`).join('')}
+    <div class="recap-total"><span>Total</span><span>${formatPrice(total)}</span></div>
+    <p style="font-size:.65rem;color:var(--muted);margin-top:.65rem">Paiement direct au vendeur</p>`;
+}
+
+function setStep(n){
+  ['step1','step2','step3'].forEach((s,i)=>document.getElementById(s).style.display=i+1===n?'block':'none');
+  document.querySelectorAll('.step').forEach((s,i)=>{s.classList.toggle('active',i+1===n);s.classList.toggle('done',i+1<n);});
+}
+
+function goStep2(){
+  const f=document.getElementById('cFirst').value.trim();const l=document.getElementById('cLast').value.trim();
+  const p=document.getElementById('cPhone').value.trim();const c=document.getElementById('cCity').value.trim();
+  const a=document.getElementById('cAddress').value.trim();
+  if(!f||!l||!p||!c||!a){showToast('Remplissez tous les champs obligatoires.','error');return;}
+  // Build payment groups by seller
+  const items=DB.getCart();
+  const bySeller={};
+  items.forEach(i=>{if(!bySeller[i.sellerId])bySeller[i.sellerId]={seller:i,items:[]};bySeller[i.sellerId].items.push(i);});
+  let html='';
+  Object.entries(bySeller).forEach(([sid,group])=>{
+    const s=group.seller;
+    const pays=s.sellerPayments||['wave'];
+    html+=`<div class="checkout-section" id="pg_${sid}">
+      <h3>PAIEMENT — ${s.sellerName.toUpperCase()}</h3>
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem">Paiement direct au vendeur pour ${group.items.map(i=>i.name).join(', ')}</p>
+      ${pays.includes('wave')?`<button onclick="selectPay('${sid}','wave',this)" class="pay-opt selected" data-pay="wave"><span class="pay-icon" style="background:#1A72E8;color:#fff">W</span>🌊 Wave — ${s.sellerWave||'Numéro du vendeur'}</button>`:''}
+      ${pays.includes('orange')?`<button onclick="selectPay('${sid}','orange',this)" class="pay-opt" data-pay="orange"><span class="pay-icon" style="background:#FF6600;color:#fff">OM</span>🟠 Orange Money — ${s.sellerOrange||'Numéro du vendeur'}</button>`:''}
+      ${pays.includes('livraison')?`<button onclick="selectPay('${sid}','livraison',this)" class="pay-opt pay-opt-livraison" data-pay="livraison"><span class="pay-icon" style="background:#10B981;color:#fff">💵</span>🚚 Paiement à la livraison</button>`:''}
+      ${!DB.getUser(sid)?.verified?`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:4px;padding:.65rem .85rem;margin-top:.75rem;font-size:.72rem;color:var(--gold);line-height:1.65">
+        ⚠️ <strong>Vendeur non vérifié.</strong> Pour plus de sécurité, privilégie le <strong>paiement à la livraison</strong> si disponible, ou contacte le vendeur sur WhatsApp avant de payer.
+      </div>`:''}
+      <div id="payinfo_${sid}" class="payment-info-box"></div>
+      <div id="txzone_${sid}" style="display:none;margin-top:.85rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1rem">
+        <label style="font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent,var(--red));font-family:var(--font-sub);display:block;margin-bottom:.45rem">📸 Capture d'écran du paiement *</label>
+        <div id="txcapture_preview_${sid}" onclick="document.getElementById('txcapture_${sid}').click()" style="height:80px;background:var(--bg2);border:2px dashed var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;margin-bottom:.5rem;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+          <span style="font-size:.75rem;color:var(--muted)">📷 Cliquer pour uploader la capture Wave/OM</span>
+        </div>
+        <input type="file" id="txcapture_${sid}" accept="image/*" style="display:none" onchange="previewCapture('${sid}',this)">
+        <p style="font-size:.65rem;color:var(--white);line-height:1.6">Prends une capture d'écran de la confirmation de paiement Wave ou Orange Money. C'est ta preuve en cas de litige.</p>
+      </div>
+    </div>`;
+  });
+  document.getElementById('paymentGroups').innerHTML=html;
+  // Auto-select first
+  Object.keys(bySeller).forEach(sid=>{
+    const firstBtn=document.querySelector(`#pg_${sid} .pay-opt`);
+    if(firstBtn)selectPay(sid,firstBtn.dataset.pay,firstBtn);
+  });
+  setStep(2);
+}
+
+const selectedPays={};
+const capturePhotos={};
+
+function previewCapture(sid,input){
+  const file=input.files[0];if(!file)return;
+  if(file.size>5*1024*1024){showToast('Image trop lourde (max 5Mo)','error');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    capturePhotos[sid]=e.target.result;
+    const preview=document.getElementById('txcapture_preview_'+sid);
+    if(preview) preview.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover">`;
+    showToast('Capture chargée ✓','success');
+  };
+  reader.readAsDataURL(file);
+}
+function selectPay(sid,method,el){
+  selectedPays[sid]=method;
+  document.querySelectorAll(`#pg_${sid} .pay-opt`).forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  const infoEl=document.getElementById(`payinfo_${sid}`);
+  const item=DB.getCart().find(i=>i.sellerId===sid);
+  if(!item)return;
+  const txzone=document.getElementById(`txzone_${sid}`);
+  if(method==='wave'){
+    infoEl.innerHTML=`<strong style="color:#1A72E8">Wave :</strong> Envoie le montant au numéro Wave du vendeur. Garde la capture d'écran comme preuve.`;
+    infoEl.classList.add('show');
+    if(txzone)txzone.style.display='block';
+  } else if(method==='orange'){
+    infoEl.innerHTML=`<strong style="color:#FF6600">Orange Money :</strong> Envoie le montant au numéro OM du vendeur. Garde la capture comme preuve.`;
+    infoEl.classList.add('show');
+    if(txzone)txzone.style.display='block';
+  } else if(method==='livraison'){
+    infoEl.innerHTML=`<strong style="color:#10B981">🚚 Paiement à la livraison :</strong> Tu paies en espèces à la réception. Aucun paiement préalable requis.`;
+    infoEl.classList.add('show');
+    if(txzone)txzone.style.display='none';
+  }
+}
+
+async function placeOrder(){
+  const items=DB.getCart();const total=DB.getCartTotal();
+  if(!items.length)return;
+  const firstName=document.getElementById('cFirst').value.trim();
+  const lastName=document.getElementById('cLast').value.trim();
+  const phone=document.getElementById('cPhone').value.trim();
+  const email=document.getElementById('cEmail').value.trim();
+  const city=document.getElementById('cCity').value.trim();
+  const address=document.getElementById('cAddress').value.trim();
+  const note=document.getElementById('cNote').value.trim();
+  const btn=document.getElementById('payBtn');btn.disabled=true;btn.textContent='En cours...';
+  // Create one order per seller
+  const orders=[];
+  for(const item of items){
+    const payment=selectedPays[item.sellerId]||'wave';
+    const capture=capturePhotos[item.sellerId]||null;
+    // Require screenshot for wave/orange (not livraison)
+    if((payment==='wave'||payment==='orange')&&!capture){
+      showToast("Uploade la capture d'écran de ton paiement Wave/OM pour protéger le vendeur.",'error');
+      btn.disabled=false;btn.textContent='Confirmer la commande';
+      return;
+    }
+    // Store capture in localStorage keyed by order (will be created next)
+    const order=DB.createOrder({
+      sellerId:item.sellerId,productId:item.id,productName:item.name,
+      firstName,lastName,phone,email,city,address,note,
+      payment,total:item.price,hasCapture:!!capture,
+    });
+    // Save capture photo separately (large base64)
+    if(capture) localStorage.setItem('capture_'+order.ref, capture);
+    orders.push(order);
+    // Notify seller via WhatsApp
+    const seller=DB.getUser(item.sellerId);
+    const product=DB.getProduct(item.id);
+    if(seller&&product){
+      await Notify.notifyNewOrder(order,seller,product);
+      // Mark product as sold
+      DB.updateProduct(item.id,{status:'sold'});
+    }
+  }
+  DB.clearCart();
+  updateCartBadge();
+  // Show confirmation
+  const refs=orders.map(o=>o.ref).join(', ');
+  document.getElementById('confirmMsg').innerHTML=`
+    Commande <strong style="color:var(--accent,var(--red))">${refs}</strong> enregistrée !<br><br>
+    Le vendeur va vous contacter sur WhatsApp pour confirmer la livraison.<br>
+    Effectuez le paiement directement au vendeur via le moyen choisi.<br><br>
+    <strong>Merci d'avoir choisi Vendora-sn !</strong>`;
+  setStep(3);
+  btn.disabled=false;btn.textContent='Confirmer la commande';
+}
+function goStep1(){setStep(1);}
+</script>
+</body>
+</html>
