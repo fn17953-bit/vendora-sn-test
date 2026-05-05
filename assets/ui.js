@@ -154,7 +154,7 @@ function createPhotoWidget(containerId, photos, photoTabs, onUpdate){
         </div>
         <div class="photo-slot${ph.url?' has-photo':''}" id="${containerId}_slot${i}" style="${photoTabs[i]==='url'?'cursor:default':''}">
           ${ph.url?`<img src="${ph.url}" alt="${ph.label}" onerror="this.style.display='none'">`:''}
-          ${photoTabs[i]==='upload'?`<input type="file" id="${containerId}_file${i}" accept="image/*,image/gif" onchange="ptUpload_${containerId}(${i},this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:${ph.url?0:3}">`:''}
+          ${photoTabs[i]==='upload'?`<input type="file" id="${containerId}_file${i}" accept="image/*,.heic,.heif" onchange="ptUpload_${containerId}(${i},this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:${ph.url?0:3}">`:''}
           ${!ph.url?`<div class="photo-slot-icon">📷</div>`:''}
           <div class="photo-slot-label">${ph.label}${i===0?' *':''}</div>
           ${ph.url?`<button class="photo-remove" onclick="ptClear_${containerId}(event,${i})">✕</button>`:''}
@@ -190,30 +190,49 @@ function createPhotoWidget(containerId, photos, photoTabs, onUpdate){
 }
 
 /* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone + Android + PC) ── */
+/* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone Safari + Android + PC) ── */
 async function uploadToCloudinary(file){
-  // Lire le fichier en base64
-  const base64 = await new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=e=>res(e.target.result);
-    r.onerror=rej;
-    r.readAsDataURL(file);
-  });
-  // Convertir en Blob JPEG (fix iPhone HEIC + Android)
-  const byteStr=atob(base64.split(',')[1]);
-  const mime=base64.split(',')[0].split(':')[1].split(';')[0]||'image/jpeg';
-  const ab=new ArrayBuffer(byteStr.length);
-  const ia=new Uint8Array(ab);
-  for(let x=0;x<byteStr.length;x++) ia[x]=byteStr.charCodeAt(x);
-  const blob=new Blob([ab],{type:mime});
-  // Envoyer à Cloudinary
-  const fd=new FormData();
-  fd.append('file',blob,'photo.jpg');
-  fd.append('upload_preset','vendora_upload');
-  const res=await fetch('https://api.cloudinary.com/v1_1/drnedgivi/image/upload',{method:'POST',body:fd});
-  const data=await res.json();
-  if(!res.ok||data.error) throw new Error(data.error?.message||'Erreur Cloudinary');
-  if(!data.secure_url) throw new Error('URL manquante');
-  return data.secure_url;
+  try{
+    let blob;
+    // Méthode native — compatible iPhone Safari, Android, PC
+    if(file.type && file.type.startsWith('image/')){
+      // Utiliser fetch pour convertir proprement en blob
+      const url = URL.createObjectURL(file);
+      const res = await fetch(url);
+      blob = await res.blob();
+      URL.revokeObjectURL(url);
+    } else {
+      // Fallback pour HEIC/HEIF iPhone (type vide)
+      blob = new Blob([await file.arrayBuffer()], {type:'image/jpeg'});
+    }
+    const fd = new FormData();
+    fd.append('file', blob, 'photo.jpg');
+    fd.append('upload_preset', 'vendora_upload');
+    const res = await fetch('https://api.cloudinary.com/v1_1/drnedgivi/image/upload', {
+      method:'POST', body:fd
+    });
+    const data = await res.json();
+    if(!res.ok || data.error) throw new Error(data.error?.message || 'Erreur Cloudinary');
+    if(!data.secure_url) throw new Error('URL manquante');
+    return data.secure_url;
+  } catch(err){
+    // Dernier recours — base64 direct
+    const base64 = await new Promise((res,rej)=>{
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    const fd = new FormData();
+    fd.append('file', base64);
+    fd.append('upload_preset', 'vendora_upload');
+    const res = await fetch('https://api.cloudinary.com/v1_1/drnedgivi/image/upload', {
+      method:'POST', body:fd
+    });
+    const data = await res.json();
+    if(!res.ok || data.error) throw new Error(data.error?.message || 'Erreur upload');
+    return data.secure_url;
+  }
 }
 
 /* ── NAV ── */
