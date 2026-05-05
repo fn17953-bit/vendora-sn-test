@@ -77,22 +77,24 @@ function rejectVerification(id){
   filter();
 }
 function viewCNI(sellerId){
-  const data=localStorage.getItem('cni_'+sellerId);
-  if(!data){showToast('Aucune CNI trouvée pour ce vendeur','error');return;}
-  const cni=JSON.parse(data);
+  const seller=DB.getUser(sellerId);
+  if(!seller||!seller.cniRecto||!seller.cniVerso){
+    showToast('Aucune CNI trouvée pour ce vendeur','error');
+    return;
+  }
   const wrap=document.createElement('div');
   wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem';
   wrap.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;max-width:600px;width:100%;padding:1.5rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div>
-        <p style="font-family:var(--font-sub);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)">CNI — ${cni.sellerName}</p>
-        <p style="font-size:.68rem;color:var(--muted)">Soumis le ${new Date(cni.submittedAt).toLocaleString('fr-FR')}</p>
+        <p style="font-family:var(--font-sub);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent)">CNI — ${seller.name}</p>
+        <p style="font-size:.68rem;color:var(--muted)">Soumis le ${seller.cniSubmittedAt?new Date(seller.cniSubmittedAt).toLocaleString('fr-FR'):'—'}</p>
       </div>
       <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:var(--text3);font-size:1.2rem;cursor:pointer">✕</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
-      <div><p style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;font-family:var(--font-sub);letter-spacing:.1em">RECTO</p><img src="${cni.recto}" style="width:100%;border-radius:6px;border:1px solid var(--border)"></div>
-      <div><p style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;font-family:var(--font-sub);letter-spacing:.1em">VERSO</p><img src="${cni.verso}" style="width:100%;border-radius:6px;border:1px solid var(--border)"></div>
+      <div><p style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;font-family:var(--font-sub);letter-spacing:.1em">RECTO</p><img src="${seller.cniRecto}" style="width:100%;border-radius:6px;border:1px solid var(--border)" onerror="this.src='';this.alt='Image non disponible'"></div>
+      <div><p style="font-size:.65rem;color:var(--muted);margin-bottom:.35rem;font-family:var(--font-sub);letter-spacing:.1em">VERSO</p><img src="${seller.cniVerso}" style="width:100%;border-radius:6px;border:1px solid var(--border)" onerror="this.src='';this.alt='Image non disponible'"></div>
     </div>
     <div style="display:flex;gap:.65rem">
       <button onclick="toggleVerified('${sellerId}',true);this.closest('div[style*=fixed]').remove()" style="flex:1;background:var(--green);color:#fff;border:none;padding:.82rem;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;font-family:var(--font-sub);border-radius:var(--r);cursor:pointer">✓ Valider — Marquer Vérifié</button>
