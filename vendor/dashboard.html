@@ -375,14 +375,14 @@ function renderProfil(){
           <div id="cniRectoPreview" onclick="document.getElementById('cniRectoInput').click()" style="height:100px;background:var(--surface);border:2px dashed var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
             <span style="font-size:.72rem;color:var(--muted)">📷 Cliquer pour uploader</span>
           </div>
-          <input type="file" id="cniRectoInput" accept="image/*" style="display:none" onchange="previewCNI('recto',this)">
+          <input type="file" id="cniRectoInput" accept="image/*,.heic,.heif" style="display:none" onchange="previewCNI('recto',this)">
         </div>
         <div>
           <label style="font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);font-family:var(--font-sub);display:block;margin-bottom:.35rem">📄 CNI Verso *</label>
           <div id="cniVersoPreview" onclick="document.getElementById('cniVersoInput').click()" style="height:100px;background:var(--surface);border:2px dashed var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:border-color .2s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
             <span style="font-size:.72rem;color:var(--muted)">📷 Cliquer pour uploader</span>
           </div>
-          <input type="file" id="cniVersoInput" accept="image/*" style="display:none" onchange="previewCNI('verso',this)">
+          <input type="file" id="cniVersoInput" accept="image/*,.heic,.heif" style="display:none" onchange="previewCNI('verso',this)">
         </div>
       </div>
       <button onclick="submitVerificationRequest()" class="btn-red" style="width:100%;font-size:.7rem">🪪 Envoyer ma demande de vérification →</button>
