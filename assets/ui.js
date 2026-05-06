@@ -192,47 +192,27 @@ function createPhotoWidget(containerId, photos, photoTabs, onUpdate){
 /* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone + Android + PC) ── */
 /* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone Safari + Android + PC) ── */
 async function uploadToCloudinary(file){
-  try{
-    let blob;
-    // Méthode native — compatible iPhone Safari, Android, PC
-    if(file.type && file.type.startsWith('image/')){
-      // Utiliser fetch pour convertir proprement en blob
-      const url = URL.createObjectURL(file);
-      const res = await fetch(url);
-      blob = await res.blob();
-      URL.revokeObjectURL(url);
-    } else {
-      // Fallback pour HEIC/HEIF iPhone (type vide)
-      blob = new Blob([await file.arrayBuffer()], {type:'image/jpeg'});
-    }
-    const fd = new FormData();
-    fd.append('file', blob, 'photo.jpg');
-    fd.append('upload_preset', 'vendora_upload');
-    const res = await fetch('https://api.cloudinary.com/v1_1/drnedgivi/image/upload', {
-      method:'POST', body:fd
-    });
-    const data = await res.json();
-    if(!res.ok || data.error) throw new Error(data.error?.message || 'Erreur Cloudinary');
-    if(!data.secure_url) throw new Error('URL manquante');
-    return data.secure_url;
-  } catch(err){
-    // Dernier recours — base64 direct
-    const base64 = await new Promise((res,rej)=>{
-      const r = new FileReader();
-      r.onload = e => res(e.target.result);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    const fd = new FormData();
-    fd.append('file', base64);
-    fd.append('upload_preset', 'vendora_upload');
-    const res = await fetch('https://api.cloudinary.com/v1_1/drnedgivi/image/upload', {
-      method:'POST', body:fd
-    });
-    const data = await res.json();
-    if(!res.ok || data.error) throw new Error(data.error?.message || 'Erreur upload');
-    return data.secure_url;
-  }
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onerror = ()=> reject(new Error('Lecture fichier échouée'));
+    reader.onload = async function(e){
+      try{
+        const fd = new FormData();
+        fd.append('file', e.target.result);
+        fd.append('upload_preset', 'vendora_upload');
+        fd.append('api_key', '735575923564911');
+        const res = await fetch(
+          'https://api.cloudinary.com/v1_1/drnedgivi/image/upload',
+          {method:'POST', body:fd}
+        );
+        const text = await res.text();
+        const data = JSON.parse(text);
+        if(data.error) reject(new Error(data.error.message));
+        else resolve(data.secure_url);
+      }catch(err){ reject(err); }
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 /* ── NAV ── */
