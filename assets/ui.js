@@ -161,7 +161,23 @@ function createPhotoWidget(containerId, photos, photoTabs, onUpdate){
         </div>
         ${photoTabs[i]==='url'?`<input type="text" class="photo-url-input" placeholder="https://... ou GIF" value="${ph.url||''}" oninput="ptSetUrl_${containerId}(${i},this.value)" onblur="ptPreview_${containerId}(${i},this.value)">`:`<p style="font-size:.6rem;color:var(--muted);text-align:center;margin-top:.3rem;font-family:var(--font-sub)">JPG · PNG · GIF · Max 3Mo</p>`}
       </div>`).join('');
-    photos.forEach((ph,i)=>{if(photoTabs[i]==='upload'&&!ph.url){const s=document.getElementById(`${containerId}_slot${i}`);if(s)s.onclick=()=>document.getElementById(`${containerId}_file${i}`)?.click();}});
+    photos.forEach((ph,i)=>{
+      if(photoTabs[i]==='upload'&&!ph.url){
+        const s=document.getElementById(`${containerId}_slot${i}`);
+        const inp=document.getElementById(`${containerId}_file${i}`);
+        if(s&&inp){
+          // Supprimer le onclick et mettre l'input directement visible sur iPhone
+          s.onclick=null;
+          inp.style.position='absolute';
+          inp.style.inset='0';
+          inp.style.opacity='0';
+          inp.style.cursor='pointer';
+          inp.style.zIndex='10';
+          inp.style.width='100%';
+          inp.style.height='100%';
+        }
+      }
+    });
     if(onUpdate)onUpdate(photos);
   }
   window[`ptSwitch_${containerId}`]=(i,tab)=>{photoTabs[i]=tab;render();};
