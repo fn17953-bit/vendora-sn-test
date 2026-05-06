@@ -190,27 +190,24 @@ function createPhotoWidget(containerId, photos, photoTabs, onUpdate){
 }
 
 /* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone + Android + PC) ── */
-/* ── CLOUDINARY UPLOAD UNIVERSEL (iPhone Safari + Android + PC) ── */
 async function uploadToCloudinary(file){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
-    reader.onerror = ()=> reject(new Error('Lecture fichier échouée'));
     reader.onload = async function(e){
       try{
         const fd = new FormData();
         fd.append('file', e.target.result);
         fd.append('upload_preset', 'vendora_upload');
-        fd.append('api_key', '735575923564911');
         const res = await fetch(
           'https://api.cloudinary.com/v1_1/drnedgivi/image/upload',
           {method:'POST', body:fd}
         );
-        const text = await res.text();
-        const data = JSON.parse(text);
+        const data = await res.json();
         if(data.error) reject(new Error(data.error.message));
         else resolve(data.secure_url);
       }catch(err){ reject(err); }
     };
+    reader.onerror = ()=> reject(new Error('Lecture fichier échouée'));
     reader.readAsDataURL(file);
   });
 }
@@ -229,7 +226,7 @@ function loadNav(){
   <nav class="main-nav" id="mainNav">
     <div class="nav-inner">
       <a href="${r}index.html" class="nav-logo">
-        <img src="assets/images/Vendora-logo.png" alt="Vendora-sn" style="height:100px;width:auto;object-fit:contain;">
+        <img src="../images/Vendora-logo.png" alt="Vendora-sn" style="height:100px;width:auto;object-fit:contain;">
       </a>
       <button class="nav-toggle" onclick="toggleMobileNav()" id="navToggle">☰</button>
       <ul class="nav-links" id="navLinks">
